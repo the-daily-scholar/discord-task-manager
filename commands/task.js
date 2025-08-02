@@ -2,6 +2,20 @@ const { EmbedBuilder } = require('discord.js');
 const { addTask, getTasks } = require('../utils/googleSheets');
 const { detectGroup } = require('../utils/helpers');
 
+function formatDueDate(due) {
+  if (due === 'No deadline') return due;
+  
+  const today = moment().startOf('day');
+  const dueDate = moment(due, 'YYYY-MM-DD');
+  const diffDays = dueDate.diff(today, 'days');
+  
+  if (diffDays === 0) return '🟠 **TODAY**';
+  if (diffDays < 0) return `🔴 ${due} (${Math.abs(diffDays)} days overdue)`;
+  if (diffDays <= 3) return `🟡 ${due} (in ${diffDays} days)`;
+  
+  return due;
+}
+
 module.exports = {
   data: {
     name: 'task',
@@ -97,6 +111,11 @@ module.exports = {
       const tasks = await getTasks(filterGroup || group);
       
       const embed = new EmbedBuilder()
+        .setDescription(tasks.map(t => 
+          `**#${t.id}** ${t.description}\n` +
+          `Assignee: <@${t.assignee}> | Due: ${formatDueDate(t.due)}\n` + // UPDATED
+          `Status: ${t.status} | Group: ${t.group}`
+        ).join('\n\n') || "No tasks found!")
         .setTitle(`📋 Tasks (${filterGroup || group})`)
         .setDescription(tasks.map(t => 
           `**#${t.id}** ${t.description}\n` +
@@ -105,6 +124,7 @@ module.exports = {
         ).join('\n\n') || "No tasks found!");
 
       await interaction.reply({ embeds: [embed] });
+       
     }
   }
 };

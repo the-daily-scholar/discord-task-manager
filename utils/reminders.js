@@ -25,5 +25,28 @@ module.exports = {
       const tasks = await getTasks();
       // ... (similar logic for 3-day reminders)
     });
+        // Inside cron jobs
+    tasks.forEach(task => {
+      if (task.due === 'No deadline') return;
+      
+      const today = moment().format('YYYY-MM-DD');
+      const dueDate = moment(task.due, 'YYYY-MM-DD');
+      
+      // Due today
+      if (task.due === today) {
+        sendDM(client, task.assignee, 
+          `⏰ **TASK DUE TODAY!**\n"${task.description}"\n` +
+          `Group: ${task.group} | Created by: ${task.creator}`
+        );
+      }
+      
+      // 3-day warning
+      else if (dueDate.diff(moment(), 'days') === 3) {
+        sendDM(client, task.assignee, 
+          `⚠️ **TASK DUE IN 3 DAYS**\n"${task.description}"\n` +
+          `Due: ${task.due} | Group: ${task.group}`
+        );
+      }
+    });
   }
 };
