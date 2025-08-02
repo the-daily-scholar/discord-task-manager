@@ -1,23 +1,26 @@
+javascript
 require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { google } = require('googleapis');
+const cron = require('node-cron');
+const { scheduleReminders } = require('./utils/reminders');
+const { addTask, getTasks, updateTask } = require('./utils/googleSheets');
+const { detectGroup } = require('./utils/helpers');
 
 const client = new Client({
   intents: [IntentsBitField.Flags.Guilds, IntentsBitField.Flags.GuildMessages]
 });
 
-// Google Sheets Setup
-const sheets = google.sheets('v4');
+// Initialize Google Sheets
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json', // (See Step 4)
+  keyFile: 'credentials.json',
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// Slash Commands
+// Register Commands on Startup
 client.on('ready', async () => {
   console.log(`✅ ${client.user.tag} is ready!`);
   
-  // Register Commands (Planny-style)
   await client.application.commands.set([
     {
       name: 'task',
@@ -26,80 +29,91 @@ client.on('ready', async () => {
         {
           type: 1, // SUB_COMMAND
           name: 'add',
-          description: 'Add a new task',
+          description: 'Add new task',
           options: [
-            { name: 'description', description: 'Task details', type: 3, required: true },
-            { name: 'assignee', description: '@User to assign', type: 6, required: false },
-            { name: 'due', description: 'Due date (YYYY-MM-DD)', type: 3, required: false }
+            { name: 'description', type: 3, required: true },
+            { name: 'due', type: 3, description: 'YYYY-MM-DD' },
+            { name: 'assignee', type: 6, description: '@User' }
           ]
         },
         {
-          type: 1, // SUB_COMMAND
+          type: 1,
           name: 'list',
-          description: 'Show all tasks'
-        },
-        {
-          type: 1, // SUB_COMMAND
-          name: 'complete',
-          description: 'Mark task as done',
+          description: 'List tasks',
           options: [
-            { name: 'id', description: 'Task ID to complete', type: 4, required: true }
+            { name: 'group', type: 3, choices: [
+              { name: 'Alpha', value: 'alpha' },
+              { name: 'Beta', value: 'beta' },
+              { name: 'Gamma', value: 'gamma' }
+            ]}
           ]
         }
       ]
+    },
+    {
+      name: 'mytasks',
+      description: 'Show your assigned tasks'
     }
   ]);
+
+  // Start reminder scheduler
+  scheduleReminders(client);
 });
 
-// Handle Commands
+// Command Handler
 client.on('interactionCreate', async interaction => {
   if (!interaction.isCommand()) return;
 
-  const { options, user } = interaction;
-  const subCmd = options.getSubcommand();
+  const { commandName, options, user, channel } = interaction;
 
-  // /task add
-  if (subCmd === 'add') {
-    const description = options.getString('description');
-    const assignee = options.getUser('assignee') || user;
-    const due = options.getString('due') || 'No deadline';
+  if (commandName === 'task') {
+    const subCmd = options.getSubcommand();
+    const group = detectGroup(channel.name);
 
-    // Add to Google Sheets (See Step 4)
-    await addTaskToSheet(description, assignee.id, due, user.tag);
+    if (subCmd === 'add') {
+      const description = options.getString('description');
+      const due = options.getString('due') || 'No deadline';
+      const assignee = options.getUser('assignee') || user;
 
-    await interaction.reply(`✅ Task added: "${description}" (Assigned to: <@${assignee.id}>)`);
+      await addTask({
+        description,
+        due,
+        assignee: assignee.id,
+        creator: user.tag,
+        group
+      });
+
+      await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
+    }
+
+    else if (subCmd === 'list') {
+      const filterGroup = options.getString('group');
+      const tasks = await getTasks(filterGroup || group);
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`📋 Tasks (${filterGroup || group})`)
+        .setDescription(tasks.map(t => 
+          `**#${t.id}** ${t.description}\n` +
+          `Assignee: <@${t.assignee}> | Due: ${t.due}\n` +
+          `Status: ${t.status} | Group: ${t.group}`
+        ).join('\n\n'));
+
+      await interaction.reply({ embeds: [embed] });
+    }
   }
 
-  // /task list
-  else if (subCmd === 'list') {
-    const tasks = await getTasksFromSheet();
-    const embed = new EmbedBuilder()
-      .setTitle('📝 Task List')
-      .setDescription(tasks.map(t => `**#${t[0]}** ${t[1]} (Due: ${t[3]})`).join('\n'));
+  else if (commandName === 'mytasks') {
+    const tasks = (await getTasks()).filter(t => t.assignee === user.id);
     
-    await interaction.reply({ embeds: [embed] });
-  }
+    const embed = new EmbedBuilder()
+      .setTitle(`📌 Your Tasks (${tasks.length})`)
+      .setDescription(tasks.map(t => 
+        `**#${t.id}** ${t.description}\n` +
+        `Due: ${t.due} | Group: ${t.group}`
+      ).join('\n\n') || "No tasks assigned!");
 
-  // /task complete
-  else if (subCmd === 'complete') {
-    const taskId = options.getInteger('id');
-    await completeTaskInSheet(taskId);
-    await interaction.reply(`✅ Task #${taskId} marked as complete!`);
+    await interaction.reply({ embeds: [embed], ephemeral: true });
   }
 });
-
-// Google Sheets Functions (Step 4)
-async function addTaskToSheet(desc, assignee, due, creator) {
-  const authClient = await auth.getClient();
-  const sheetId = process.env.GOOGLE_SHEETS_ID;
-
-  await sheets.spreadsheets.values.append({
-    auth: authClient,
-    spreadsheetId: sheetId,
-    range: 'A:F',
-    valueInputOption: 'RAW',
-    resource: { values: [[ desc, assignee, due, '🟡 Pending', creator ]] }
-  });
-}
 
 client.login(process.env.DISCORD_TOKEN);
