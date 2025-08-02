@@ -46,6 +46,30 @@ module.exports = {
             ]
           }
         ]
+      },
+      {
+        type: 1, // SUB_COMMAND
+        name: 'update',
+        description: 'Update task status',
+        options: [
+          { 
+            name: 'id', 
+            description: 'Task ID to update', 
+            type: 4, // INTEGER
+            required: true 
+          },
+          {
+            name: 'status',
+            description: 'New status',
+            type: 3, // STRING
+            required: true,
+            choices: [
+              { name: '🟡 Pending', value: '🟡 Pending' },
+              { name: '🟠 In Progress', value: '🟠 In Progress' },
+              { name: '✅ Completed', value: '✅ Completed' }
+            ]
+          }
+        ]
       }
     ]
   },
