@@ -1,4 +1,3 @@
-javascript
 require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { google } = require('googleapis');
@@ -31,9 +30,22 @@ client.on('ready', async () => {
           name: 'add',
           description: 'Add new task',
           options: [
-            { name: 'description', type: 3, required: true },
-            { name: 'due', type: 3, description: 'YYYY-MM-DD' },
-            { name: 'assignee', type: 6, description: '@User' }
+            { 
+              name: 'description', 
+              type: 3, 
+              required: true,
+              description: 'What needs to be done?'  // Added missing description
+            },
+            { 
+              name: 'due', 
+              type: 3, 
+              description: 'When is this due? (YYYY-MM-DD)'  // Enhanced description
+            },
+            { 
+              name: 'assignee', 
+              type: 6, 
+              description: 'Who should complete this task? (@mention)'  // Enhanced description
+            }
           ]
         },
         {
@@ -41,11 +53,16 @@ client.on('ready', async () => {
           name: 'list',
           description: 'List tasks',
           options: [
-            { name: 'group', type: 3, choices: [
-              { name: 'Alpha', value: 'alpha' },
-              { name: 'Beta', value: 'beta' },
-              { name: 'Gamma', value: 'gamma' }
-            ]}
+            { 
+              name: 'group', 
+              type: 3, 
+              description: 'Filter by which team?',  // Added missing description
+              choices: [
+                { name: 'Alpha', value: 'alpha' },
+                { name: 'Beta', value: 'beta' },
+                { name: 'Gamma', value: 'gamma' }
+              ]
+            }
           ]
         }
       ]

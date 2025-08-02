@@ -12,9 +12,22 @@ module.exports = {
         name: 'add',
         description: 'Add new task',
         options: [
-          { name: 'description', type: 3, required: true },
-          { name: 'due', type: 3, description: 'YYYY-MM-DD' },
-          { name: 'assignee', type: 6, description: '@User' }
+          { 
+            name: 'description', 
+            type: 3, 
+            required: true,
+            description: 'Detailed explanation of the task'  // Added
+          },
+          { 
+            name: 'due', 
+            type: 3, 
+            description: 'Deadline (format: YYYY-MM-DD)'  // Enhanced
+          },
+          { 
+            name: 'assignee', 
+            type: 6, 
+            description: 'Team member responsible (@username)'  // Enhanced
+          }
         ]
       },
       {
@@ -22,11 +35,16 @@ module.exports = {
         name: 'list',
         description: 'List tasks',
         options: [
-          { name: 'group', type: 3, choices: [
-            { name: 'Alpha', value: 'alpha' },
-            { name: 'Beta', value: 'beta' },
-            { name: 'Gamma', value: 'gamma' }
-          ]}
+          { 
+            name: 'group', 
+            type: 3, 
+            description: 'Select team to filter tasks',  // Added
+            choices: [
+              { name: 'Alpha', value: 'alpha' },
+              { name: 'Beta', value: 'beta' },
+              { name: 'Gamma', value: 'gamma' }
+            ]
+          }
         ]
       }
     ]
