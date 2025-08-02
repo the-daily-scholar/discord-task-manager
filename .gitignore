@@ -4,6 +4,7 @@
 .env.development
 .env.production
 .env.test
+credentials.json
 
 # Node modules
 node_modules/
