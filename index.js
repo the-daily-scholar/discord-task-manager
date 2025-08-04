@@ -99,7 +99,14 @@ client.on('interactionCreate', async interaction => {
     if (commandName === 'task') {
       const subCmd = options.getSubcommand();
       const group = detectGroup(channel.name.toLowerCase()); // enforce lowercase
-
+      
+      if (!group) {
+        await interaction.reply({ 
+          content: `❌ This channel (**${channel.name}**) is not mapped to any group. Please use a valid task channel or contact an admin.`,
+          ephemeral: true 
+        });
+        return;
+      }
       if (subCmd === 'add') {
         const description = options.getString('description');
         let due = options.getString('due');
