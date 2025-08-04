@@ -12,6 +12,7 @@ const client = new Client({
   ]
 });
 
+/*
 const group = detectGroup(channel.name);
 if (!group) {
   await interaction.reply({ 
@@ -20,7 +21,7 @@ if (!group) {
   });
   return;
 }
-
+*/
 
 // Helper: Validate date format (YYYY-MM-DD)
 function isValidDate(dateStr) {
