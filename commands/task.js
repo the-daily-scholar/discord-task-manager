@@ -86,7 +86,6 @@ module.exports = {
 
       if (subCmd === 'add') {
         const description = interaction.options.getString('description');
-        let due = interaction.options.getString('due') || 'No deadline';
         const assignee = interaction.options.getUser('assignee') || interaction.user;
 
         // Validate due date
