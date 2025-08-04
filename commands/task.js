@@ -2,6 +2,7 @@ const { EmbedBuilder } = require('discord.js');
 const moment = require('moment');
 const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets');
 const { detectGroup } = require('../utils/helpers');
+const { parseDueDate } = require('../utils/dateHelper');
 
 function formatDueDate(due) {
   if (due === 'No deadline') return due;
