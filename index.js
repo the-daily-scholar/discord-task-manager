@@ -1,20 +1,31 @@
 require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
-const { google } = require('googleapis');
-const cron = require('node-cron');
 const { scheduleReminders } = require('./utils/reminders');
-const { addTask, getTasks, updateTask } = require('./utils/googleSheets');
+const { addTask, getTasks } = require('./utils/googleSheets');
 const { detectGroup } = require('./utils/helpers');
 
 const client = new Client({
-  intents: [IntentsBitField.Flags.Guilds, IntentsBitField.Flags.GuildMessages]
+  intents: [
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.GuildMembers // Added for assignee fetching
+  ]
 });
 
-// Initialize Google Sheets
-const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json',
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
+const group = detectGroup(channel.name);
+if (!group) {
+  await interaction.reply({ 
+    content: `❌ This channel (**${channel.name}**) is not mapped to any group. Please use a valid task channel or contact an admin.`,
+    ephemeral: true 
+  });
+  return;
+}
+
+
+// Helper: Validate date format (YYYY-MM-DD)
+function isValidDate(dateStr) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
+}
 
 // Register Commands on Startup
 client.on('ready', async () => {
@@ -34,17 +45,17 @@ client.on('ready', async () => {
               name: 'description', 
               type: 3, 
               required: true,
-              description: 'What needs to be done?'  // Added missing description
+              description: 'What needs to be done?'
             },
             { 
               name: 'due', 
               type: 3, 
-              description: 'When is this due? (YYYY-MM-DD)'  // Enhanced description
+              description: 'When is this due? (YYYY-MM-DD)'
             },
             { 
               name: 'assignee', 
               type: 6, 
-              description: 'Who should complete this task? (@mention)'  // Enhanced description
+              description: 'Who should complete this task? (@mention)'
             }
           ]
         },
@@ -56,7 +67,7 @@ client.on('ready', async () => {
             { 
               name: 'group', 
               type: 3, 
-              description: 'Filter by which team?',  // Added missing description
+              description: 'Filter by which team?',
               choices: [
                 { name: 'Alpha', value: 'alpha' },
                 { name: 'Beta', value: 'beta' },
@@ -83,53 +94,75 @@ client.on('interactionCreate', async interaction => {
 
   const { commandName, options, user, channel } = interaction;
 
-  if (commandName === 'task') {
-    const subCmd = options.getSubcommand();
-    const group = detectGroup(channel.name);
+  try {
+    if (commandName === 'task') {
+      const subCmd = options.getSubcommand();
+      const group = detectGroup(channel.name.toLowerCase()); // enforce lowercase
 
-    if (subCmd === 'add') {
-      const description = options.getString('description');
-      const due = options.getString('due') || 'No deadline';
-      const assignee = options.getUser('assignee') || user;
+      if (subCmd === 'add') {
+        const description = options.getString('description');
+        let due = options.getString('due');
+        const assignee = options.getUser('assignee') || user;
 
-      await addTask({
-        description,
-        due,
-        assignee: assignee.id,
-        creator: user.tag,
-        group
-      });
+        // Validate due date
+        if (due && !isValidDate(due)) {
+          await interaction.reply({ content: "❌ Invalid date format. Use YYYY-MM-DD.", ephemeral: true });
+          return;
+        }
+        due = due || 'No deadline';
 
-      await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
+        await addTask({
+          description,
+          due,
+          assignee: assignee.id,
+          creator: user.tag,
+          group
+        });
+
+        await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
+      }
+
+      else if (subCmd === 'list') {
+        const filterGroup = options.getString('group');
+        const tasks = await getTasks(filterGroup || group);
+        
+        let description = tasks.map(t => 
+          `**#${t.id}** ${t.description}\nAssignee: <@${t.assignee}> | Due: ${t.due}\nStatus: ${t.status} | Group: ${t.group}`
+        ).join('\n\n') || "No tasks found.";
+
+        // Truncate to fit Discord embed limits
+        if (description.length > 4000) {
+          description = description.substring(0, 4000) + "\n\n...and more";
+        }
+
+        const embed = new EmbedBuilder()
+          .setTitle(`📋 Tasks (${filterGroup || group})`)
+          .setDescription(description);
+
+        await interaction.reply({ embeds: [embed] });
+      }
     }
 
-    else if (subCmd === 'list') {
-      const filterGroup = options.getString('group');
-      const tasks = await getTasks(filterGroup || group);
+    else if (commandName === 'mytasks') {
+      const tasks = (await getTasks()).filter(t => t.assignee === user.id);
       
+      let description = tasks.map(t => 
+        `**#${t.id}** ${t.description}\nDue: ${t.due} | Group: ${t.group}`
+      ).join('\n\n') || "No tasks assigned!";
+
+      if (description.length > 4000) {
+        description = description.substring(0, 4000) + "\n\n...and more";
+      }
+
       const embed = new EmbedBuilder()
-        .setTitle(`📋 Tasks (${filterGroup || group})`)
-        .setDescription(tasks.map(t => 
-          `**#${t.id}** ${t.description}\n` +
-          `Assignee: <@${t.assignee}> | Due: ${t.due}\n` +
-          `Status: ${t.status} | Group: ${t.group}`
-        ).join('\n\n'));
+        .setTitle(`📌 Your Tasks (${tasks.length})`)
+        .setDescription(description);
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed], ephemeral: true });
     }
-  }
-
-  else if (commandName === 'mytasks') {
-    const tasks = (await getTasks()).filter(t => t.assignee === user.id);
-    
-    const embed = new EmbedBuilder()
-      .setTitle(`📌 Your Tasks (${tasks.length})`)
-      .setDescription(tasks.map(t => 
-        `**#${t.id}** ${t.description}\n` +
-        `Due: ${t.due} | Group: ${t.group}`
-      ).join('\n\n') || "No tasks assigned!");
-
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+  } catch (error) {
+    console.error("Command error:", error);
+    await interaction.reply({ content: "❌ An error occurred while processing your request.", ephemeral: true });
   }
 });
 

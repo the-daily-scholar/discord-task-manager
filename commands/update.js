@@ -26,37 +26,48 @@ module.exports = {
     const newStatus = interaction.options.getString('status');
     
     try {
-      // Get current task details
+      // Fetch task
       const task = await getTask(taskId);
-      
       if (!task) {
         return interaction.reply({
           content: `❌ Task #${taskId} not found!`,
           ephemeral: true
         });
       }
-      
-      // Update status in Google Sheets
+
+      // Prevent redundant updates
+      if (task.status === newStatus) {
+        return interaction.reply({
+          content: `⚠️ Task #${taskId} is already set to **${newStatus}**.`,
+          ephemeral: true
+        });
+      }
+
+      // Validate group mapping (fallback to "Unknown")
+      const group = task.group || "Unknown";
+
+      // Update status
       await updateTaskStatus(taskId, newStatus);
-      
-      // Create confirmation embed
+
+      // Build confirmation embed
       const embed = new EmbedBuilder()
         .setTitle(`📝 Task #${taskId} Updated`)
-        .setDescription(task.description)
+        .setDescription(task.description || "No description available.")
         .addFields(
           { name: 'New Status', value: newStatus, inline: true },
           { name: 'Assignee', value: `<@${task.assignee}>`, inline: true },
-          { name: 'Group', value: task.group, inline: true }
+          { name: 'Group', value: group, inline: true }
         )
-        .setColor(0x5865F2)
-        .setFooter({ text: `Updated by ${interaction.user.tag}` });
-      
+        .setColor(newStatus === '✅ Completed' ? 0x57F287 : 0x5865F2)
+        .setFooter({ text: `Updated by ${interaction.user.tag}` })
+        .setTimestamp();
+
       await interaction.reply({ embeds: [embed] });
       
     } catch (error) {
-      console.error('Update error:', error);
+      console.error('Update command error:', error);
       await interaction.reply({
-        content: '❌ Failed to update task!',
+        content: '❌ Failed to update task! Please try again later.',
         ephemeral: true
       });
     }

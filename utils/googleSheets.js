@@ -1,4 +1,3 @@
-
 const { google } = require('googleapis');
 const auth = new google.auth.GoogleAuth({
   keyFile: 'credentials.json',
@@ -8,7 +7,6 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: 'v4', auth });
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
 
-// Column mapping for flags (add to top of file)
 const FLAG_COLUMNS = {
   reminder100Sent: 'I',
   reminder36Sent: 'J',
@@ -18,88 +16,110 @@ const FLAG_COLUMNS = {
 
 module.exports = {
   async addTask({ description, due, assignee, creator, group }) {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'A:F',
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [[
-          `=ROW()-1`, // Auto ID
-          description,
-          assignee,
-          due,
-          "🟡 Pending",
-          creator,
-          `=NOW()`,
-          group
-        ]]
-      }
-    });
+    try {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'A:L',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[
+            `=ROW()-1`,      // Auto ID
+            description,
+            assignee,
+            due,
+            "🟡 Pending",
+            creator,
+            `=NOW()`,
+            group,
+            'FALSE', 'FALSE', 'FALSE', 'FALSE' // Initialize flags
+          ]]
+        }
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
   },
 
   async getTasks(groupFilter) {
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'A:H'
-    });
-    
-    return res.data.values
-      ? res.data.values.map(row => ({
-          id: row[0],
-          description: row[1],
-          assignee: row[2],
-          due: row[3],
-          status: row[4],
-          creator: row[5],
-          group: row[7]
-        })).filter(t => !groupFilter || t.group === groupFilter)
-      : [];
+    try {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'A:L'
+      });
+      
+      return res.data.values
+        ? res.data.values.map(row => ({
+            id: row[0],
+            description: row[1],
+            assignee: row[2],
+            due: row[3],
+            status: row[4],
+            creator: row[5],
+            group: row[7],
+            reminder100Sent: row[8] === 'TRUE',
+            reminder36Sent: row[9] === 'TRUE',
+            overdue50Sent: row[10] === 'TRUE',
+            overdue150Sent: row[11] === 'TRUE'
+          })).filter(t => !groupFilter || t.group === groupFilter)
+        : [];
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      return [];
+    }
   },
-  // Add to module.exports
-async getTask(taskId) {
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'A:H'
-  });
-  
-  if (!res.data.values) return null;
-  
-  // Find task by ID (column A)
-  const taskRow = res.data.values.find(row => row[0] == taskId);
-  
-  return taskRow ? {
-    id: taskRow[0],
-    description: taskRow[1],
-    assignee: taskRow[2],
-    due: taskRow[3],
-    status: taskRow[4],
-    creator: taskRow[5],
-    group: taskRow[7]
-  } : null;
-},
 
-async updateTaskStatus(taskId, newStatus) {
-  // Find row index for task ID
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'A:H'
-  });
-  
-  if (!res.data.values) return;
-  
-  const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
-  if (rowIndex === -1) return;
-  
-  // Update status in column E (index 4)
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `E${rowIndex + 1}`, // +1 because Sheets is 1-indexed
-    valueInputOption: 'RAW',
-    resource: { values: [[newStatus]] }
-  });
-},
+  async getTask(taskId) {
+    try {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'A:L'
+      });
+      
+      if (!res.data.values) return null;
+      const taskRow = res.data.values.find(row => row[0] == taskId);
+      
+      return taskRow ? {
+        id: taskRow[0],
+        description: taskRow[1],
+        assignee: taskRow[2],
+        due: taskRow[3],
+        status: taskRow[4],
+        creator: taskRow[5],
+        group: taskRow[7],
+        reminder100Sent: taskRow[8] === 'TRUE',
+        reminder36Sent: taskRow[9] === 'TRUE',
+        overdue50Sent: taskRow[10] === 'TRUE',
+        overdue150Sent: taskRow[11] === 'TRUE'
+      } : null;
+    } catch (error) {
+      console.error('Error fetching task:', error);
+      return null;
+    }
+  },
 
-  // New function for updating flags
+  async updateTaskStatus(taskId, newStatus) {
+    try {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'A:L'
+      });
+      
+      if (!res.data.values) return;
+      const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
+      if (rowIndex === -1) return;
+      
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `E${rowIndex + 1}`, // +1 because Sheets is 1-indexed
+        valueInputOption: 'RAW',
+        resource: { values: [[newStatus]] }
+      });
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    }
+  },
+
   async updateTaskFlag(taskId, flagName, value) {
     try {
       await sheets.spreadsheets.values.update({
@@ -110,33 +130,6 @@ async updateTaskStatus(taskId, newStatus) {
       });
     } catch (error) {
       console.error('Error updating flag:', error);
-      throw error;
     }
-  },
-
-  // Modified getTask() to include flags
-  async getTask(taskId) {
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'A:L' // Updated to include all columns
-    });
-    
-    if (!res.data.values) return null;
-    
-    const taskRow = res.data.values.find(row => row[0] == taskId);
-    return taskRow ? {
-      id: taskRow[0],
-      description: taskRow[1],
-      assignee: taskRow[2],
-      due: row[3],
-      status: row[4],
-      creator: row[5],
-      group: row[7],
-      reminder100Sent: row[8] === 'TRUE',
-      reminder36Sent: row[9] === 'TRUE',
-      overdue50Sent: row[10] === 'TRUE',
-      overdue150Sent: row[11] === 'TRUE'
-    } : null;
   }
 };
-

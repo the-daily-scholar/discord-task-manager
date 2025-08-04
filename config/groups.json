@@ -1,5 +1,5 @@
 {
-    "alpha": ["#alpha-general", "#alpha-tasks"],
-    "beta": ["#beta-dev", "#beta-urgent"],
-    "gamma": ["#gamma-backend", "#gamma-frontend"]
-  }
+  "alpha": ["alpha"],
+  "beta": ["beta"],
+  "gamma": ["gamma"]
+}
