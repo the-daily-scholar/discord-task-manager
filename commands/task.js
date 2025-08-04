@@ -90,10 +90,15 @@ module.exports = {
         const assignee = interaction.options.getUser('assignee') || interaction.user;
 
         // Validate due date
-        if (due !== 'No deadline' && !isValidDate(due)) {
-          await interaction.reply({ content: "❌ Invalid date format. Use YYYY-MM-DD.", ephemeral: true });
-          return;
-        }
+        const rawDue = interaction.options.getString('due') || 'No deadline';
+const { date: due, error } = parseDueDate(rawDue);
+
+if (error) {
+  return await interaction.reply({
+    content: `❌ ${error}`,
+    ephemeral: true
+  });
+}
 
         await addTask({ description, due, assignee: assignee.id, creator: interaction.user.tag, group });
         await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
