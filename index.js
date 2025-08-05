@@ -15,6 +15,11 @@ const client = new Client({
 client.on('ready', async () => {
   console.log(`✅ ${client.user.tag} is ready!`);
 
+
+///
+  //BELOW HERE IS THE HARDCODED COMMANDS SET!!!
+  //DON'T TURN IT ON UNLESS deploy-commands.js BREAKS!!!
+/*
   await client.application.commands.set([
     {
       name: 'task',
@@ -104,7 +109,8 @@ client.on('ready', async () => {
       ],
     },
   ]);
-
+*/
+///
   // Start reminder scheduler
   scheduleReminders(client);
 });
