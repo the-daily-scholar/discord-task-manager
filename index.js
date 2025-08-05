@@ -2,79 +2,107 @@ require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { scheduleReminders } = require('./utils/reminders');
 const { addTask, getTasks } = require('./utils/googleSheets');
-const group = interaction.options.getString('group');
-
-
 
 const client = new Client({
   intents: [
     IntentsBitField.Flags.Guilds,
     IntentsBitField.Flags.GuildMessages,
-    IntentsBitField.Flags.GuildMembers // Added for assignee fetching
-  ]
+    IntentsBitField.Flags.GuildMembers, // Added for member data when assigning tasks
+  ],
 });
-
-
-// Helper: Validate date format (YYYY-MM-DD)
-function isValidDate(dateStr) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(Date.parse(dateStr));
-}
 
 // Register Commands on Startup
 client.on('ready', async () => {
   console.log(`✅ ${client.user.tag} is ready!`);
-  
+
   await client.application.commands.set([
     {
       name: 'task',
       description: 'Manage tasks',
       options: [
         {
-          type: 1, // SUB_COMMAND
+          type: 1,
           name: 'add',
           description: 'Add new task',
           options: [
             { 
               name: 'description', 
               type: 3, 
+              required: true, 
+              description: 'What needs to be done?' 
+            },
+            { 
+              name: 'group',
+              type: 3,
+              description: 'Which team is this for?',
               required: true,
-              description: 'What needs to be done?'
+              choices: [
+                { name: 'General', value: 'general' },
+                { name: 'Alpha', value: 'alpha' },
+                { name: 'Beta', value: 'beta' },
+                { name: 'Gamma', value: 'gamma' },
+                { name: 'Delta', value: 'delta' },
+              ],
             },
             { 
               name: 'due', 
               type: 3, 
-              description: 'When is this due? (YYYY-MM-DD)'
+              description: 'When is this due? (YYYY-MM-DD)' 
             },
             { 
               name: 'assignee', 
               type: 6, 
-              description: 'Who should complete this task? (@mention)'
+              description: 'Who should complete this task? (@mention)' 
             }
-          ]
+          ],
         },
         {
           type: 1,
           name: 'list',
           description: 'List tasks',
           options: [
-            { 
-              name: 'group', 
-              type: 3, 
-              description: 'Filter by which team?',
+            {
+              name: 'group',
+              type: 3,
+              description: 'Filter by team',
               choices: [
+                { name: 'General', value: 'general' },
                 { name: 'Alpha', value: 'alpha' },
                 { name: 'Beta', value: 'beta' },
-                { name: 'Gamma', value: 'gamma' }
-              ]
-            }
-          ]
-        }
-      ]
+                { name: 'Gamma', value: 'gamma' },
+                { name: 'Delta', value: 'delta' },
+              ],
+            },
+            {
+              name: 'status',
+              type: 3,
+              description: 'Filter by status',
+              choices: [
+                { name: '🟡 Pending', value: '🟡 Pending' },
+                { name: '🟠 In Progress', value: '🟠 In Progress' },
+                { name: '✅ Completed', value: '✅ Completed' },
+              ],
+            },
+          ],
+        },
+      ],
     },
     {
       name: 'mytasks',
-      description: 'Show your assigned tasks'
-    }
+      description: 'Show your assigned tasks',
+      options: [
+        {
+          name: 'status',
+          type: 3,
+          description: 'Filter by status',
+          choices: [
+            { name: '🟡 Pending', value: '🟡 Pending' },
+            { name: '🟠 In Progress', value: '🟠 In Progress' },
+            { name: '✅ Completed', value: '✅ Completed' },
+          ],
+        },
+      ],
+    },
   ]);
 
   // Start reminder scheduler
@@ -82,57 +110,71 @@ client.on('ready', async () => {
 });
 
 // Command Handler
-client.on('interactionCreate', async interaction => {
+client.on('interactionCreate', async (interaction) => {
   if (!interaction.isCommand()) return;
 
-  const { commandName, options, user, channel } = interaction;
+  const { commandName } = interaction;
 
-  try {
-    if (commandName === 'task') {
-      const subCmd = options.getSubcommand();
-  
+  if (commandName === 'task') {
+    const subCmd = interaction.options.getSubcommand();
 
-      if (subCmd === 'list') {
-        const filterGroup = options.getString('group');
-        const tasks = await getTasks(filterGroup || group);
-        
-        let description = tasks.map(t => 
-          `**#${t.id}** ${t.description}\nAssignee: <@${t.assignee}> | Due: ${t.due}\nStatus: ${t.status} | Group: ${t.group}`
-        ).join('\n\n') || "No tasks found.";
+    if (subCmd === 'add') {
+      const description = interaction.options.getString('description');
+      const due = interaction.options.getString('due') || 'No deadline';
+      const assignee = interaction.options.getUser('assignee') || interaction.user;
+      const group = interaction.options.getString('group');
 
-        // Truncate to fit Discord embed limits
-        if (description.length > 4000) {
-          description = description.substring(0, 4000) + "\n\n...and more";
-        }
+      await addTask({
+        description,
+        due,
+        assignee: assignee.id,
+        creator: interaction.user.tag,
+        group,
+      });
 
-        const embed = new EmbedBuilder()
-          .setTitle(`📋 Tasks (${filterGroup || group})`)
-          .setDescription(description);
-
-        await interaction.reply({ embeds: [embed] });
-      }
+      await interaction.reply({ content: `✅ Task added for <@${assignee.id}> in ${group}`, flags: 1 << 6 });
     }
 
-    else if (commandName === 'mytasks') {
-      const tasks = (await getTasks()).filter(t => t.assignee === user.id);
-      
-      let description = tasks.map(t => 
-        `**#${t.id}** ${t.description}\nDue: ${t.due} | Group: ${t.group}`
-      ).join('\n\n') || "No tasks assigned!";
+    else if (subCmd === 'list') {
+      const filterGroup = interaction.options.getString('group');
+      const filterStatus = interaction.options.getString('status');
+      let tasks = await getTasks(filterGroup);
 
-      if (description.length > 4000) {
-        description = description.substring(0, 4000) + "\n\n...and more";
+      if (filterStatus) {
+        tasks = tasks.filter((t) => t.status === filterStatus);
       }
 
       const embed = new EmbedBuilder()
-        .setTitle(`📌 Your Tasks (${tasks.length})`)
-        .setDescription(description);
+        .setTitle(`📋 Tasks (${filterGroup || 'All'})`)
+        .setDescription(
+          tasks.length
+            ? tasks.map((t) =>
+                `**#${t.id}** ${t.description}\nAssignee: <@${t.assignee}> | Due: ${t.due}\nStatus: ${t.status} | Group: ${t.group}`
+              ).join('\n\n')
+            : 'No tasks found!'
+        );
 
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      await interaction.reply({ embeds: [embed] });
     }
-  } catch (error) {
-    console.error("Command error:", error);
-    await interaction.reply({ content: "❌ An error occurred while processing your request.", ephemeral: true });
+  }
+
+  else if (commandName === 'mytasks') {
+    const filterStatus = interaction.options.getString('status');
+    let tasks = (await getTasks()).filter((t) => t.assignee === interaction.user.id);
+
+    if (filterStatus) {
+      tasks = tasks.filter((t) => t.status === filterStatus);
+    }
+
+    const embed = new EmbedBuilder()
+      .setTitle(`📌 Your Tasks (${tasks.length})`)
+      .setDescription(
+        tasks.length
+          ? tasks.map((t) => `**#${t.id}** ${t.description}\nDue: ${t.due} | Group: ${t.group}`).join('\n\n')
+          : 'No tasks assigned!'
+      );
+
+    await interaction.reply({ embeds: [embed], flags: 1 << 6 });
   }
 });
 
