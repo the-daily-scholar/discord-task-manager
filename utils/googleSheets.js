@@ -1,8 +1,13 @@
 const { google } = require('googleapis');
+const creds = JSON.parse(
+  Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString()
+);
+
 const auth = new google.auth.GoogleAuth({
-  keyFile: 'credentials.json',
+  credentials: creds,
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
+
 
 const sheets = google.sheets({ version: 'v4', auth });
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
