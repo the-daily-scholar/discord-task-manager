@@ -32,9 +32,16 @@ module.exports = {
         name: 'add',
         description: 'Add new task',
         options: [
-          { name: 'description', type: 3, required: true, description: 'Detailed explanation of the task' },
-          { name: 'due', type: 3, description: 'Deadline (format: YYYY-MM-DD)' },
-          { name: 'assignee', type: 6, description: 'Team member responsible (@username)' }
+          { name: 'description', type: 3, required: true, description: 'Task details' },
+          { name: 'due', type: 3, description: 'Deadline (YYYY-MM-DD)' },
+          { name: 'assignee', type: 6, description: 'Assign to a member' },
+          { name: 'group', type: 3, description: 'Task group', choices: [
+            { name: 'General', value: 'general' },
+            { name: 'Alpha', value: 'alpha' },
+            { name: 'Beta', value: 'beta' },
+            { name: 'Gamma', value: 'gamma' },
+            { name: 'Delta', value: 'delta' }
+          ]}
         ]
       },
       {
@@ -42,14 +49,18 @@ module.exports = {
         name: 'list',
         description: 'List tasks',
         options: [
-          { 
-            name: 'group', type: 3, description: 'Select team to filter tasks',
-            choices: [
-              { name: 'Alpha', value: 'alpha' },
-              { name: 'Beta', value: 'beta' },
-              { name: 'Gamma', value: 'gamma' }
-            ]
-          }
+          { name: 'group', type: 3, description: 'Filter by group', choices: [
+            { name: 'General', value: 'general' },
+            { name: 'Alpha', value: 'alpha' },
+            { name: 'Beta', value: 'beta' },
+            { name: 'Gamma', value: 'gamma' },
+            { name: 'Delta', value: 'delta' }
+          ]},
+          { name: 'status', type: 3, description: 'Filter by status', choices: [
+            { name: 'Pending', value: '🟡 Pending' },
+            { name: 'In Progress', value: '🟠 In Progress' },
+            { name: 'Completed', value: '✅ Completed' }
+          ]}
         ]
       },
       {
@@ -57,34 +68,14 @@ module.exports = {
         name: 'update',
         description: 'Update task status',
         options: [
-          { name: 'id', description: 'Task ID to update', type: 4, required: true },
-          { 
-            name: 'status', description: 'New status', type: 3, required: true,
-            choices: [
-              { name: '🟡 Pending', value: '🟡 Pending' },
-              { name: '🟠 In Progress', value: '🟠 In Progress' },
-              { name: '✅ Completed', value: '✅ Completed' }
-            ]
-          }
-        ]
-      },
-      {
-        name: 'group',
-        description: 'Select task group',
-        type: 3,      // STRING
-        required: true,
-        choices: [
-          { name: 'General', value: 'general' },
-          { name: 'Alpha',   value: 'alpha'   },
-          { name: 'Beta',    value: 'beta'    },
-          { name: 'Gamma',   value: 'gamma'   },
-          { name: 'Delta',   value: 'delta'   }
-          // …add more as needed…
-          // Add Channel names here or remove them as required
-
+          { name: 'id', type: 4, required: true, description: 'Task ID' },
+          { name: 'status', type: 3, required: true, description: 'New status', choices: [
+            { name: 'Pending', value: '🟡 Pending' },
+            { name: 'In Progress', value: '🟠 In Progress' },
+            { name: 'Completed', value: '✅ Completed' }
+          ]}
         ]
       }
-      
     ]
   },
 
