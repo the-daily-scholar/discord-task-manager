@@ -1,8 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
 const moment = require('moment');
 const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets');
-const { detectGroup } = require('../utils/helpers');
 const { parseDueDate } = require('../utils/dateHelper');
+const group = interaction.options.getString('group');
+
 
 function formatDueDate(due) {
   if (due === 'No deadline') return due;
@@ -67,7 +68,24 @@ module.exports = {
             ]
           }
         ]
+      },
+      {
+        name: 'group',
+        description: 'Select task group',
+        type: 3,      // STRING
+        required: true,
+        choices: [
+          { name: 'General', value: 'general' },
+          { name: 'Alpha',   value: 'alpha'   },
+          { name: 'Beta',    value: 'beta'    },
+          { name: 'Gamma',   value: 'gamma'   },
+          { name: 'Delta',   value: 'delta'   }
+          // …add more as needed…
+          // Add Channel names here or remove them as required
+
+        ]
       }
+      
     ]
   },
 
@@ -102,6 +120,7 @@ if (error) {
         await addTask({ description, due, assignee: assignee.id, creator: interaction.user.tag, group });
         await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
       }
+
 
       else if (subCmd === 'list') {
         const filterGroup = interaction.options.getString('group');

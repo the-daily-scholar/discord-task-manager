@@ -2,7 +2,9 @@ require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { scheduleReminders } = require('./utils/reminders');
 const { addTask, getTasks } = require('./utils/googleSheets');
-const { detectGroup } = require('./utils/helpers');
+const group = interaction.options.getString('group');
+
+
 
 const client = new Client({
   intents: [
@@ -12,16 +14,6 @@ const client = new Client({
   ]
 });
 
-/*
-const group = detectGroup(channel.name);
-if (!group) {
-  await interaction.reply({ 
-    content: `❌ This channel (**${channel.name}**) is not mapped to any group. Please use a valid task channel or contact an admin.`,
-    ephemeral: true 
-  });
-  return;
-}
-*/
 
 // Helper: Validate date format (YYYY-MM-DD)
 function isValidDate(dateStr) {
@@ -98,39 +90,9 @@ client.on('interactionCreate', async interaction => {
   try {
     if (commandName === 'task') {
       const subCmd = options.getSubcommand();
-      const group = detectGroup(channel.name.toLowerCase()); // enforce lowercase
-      
-      if (!group) {
-        await interaction.reply({ 
-          content: `❌ This channel (**${channel.name}**) is not mapped to any group. Please use a valid task channel or contact an admin.`,
-          ephemeral: true 
-        });
-        return;
-      }
-      if (subCmd === 'add') {
-        const description = options.getString('description');
-        let due = options.getString('due');
-        const assignee = options.getUser('assignee') || user;
+  
 
-        // Validate due date
-        if (due && !isValidDate(due)) {
-          await interaction.reply({ content: "❌ Invalid date format. Use YYYY-MM-DD.", ephemeral: true });
-          return;
-        }
-        due = due || 'No deadline';
-
-        await addTask({
-          description,
-          due,
-          assignee: assignee.id,
-          creator: user.tag,
-          group
-        });
-
-        await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
-      }
-
-      else if (subCmd === 'list') {
+      if (subCmd === 'list') {
         const filterGroup = options.getString('group');
         const tasks = await getTasks(filterGroup || group);
         
