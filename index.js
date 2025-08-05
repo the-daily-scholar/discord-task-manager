@@ -2,7 +2,6 @@ require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { scheduleReminders } = require('./utils/reminders');
 const { addTask, getTasks } = require('./utils/googleSheets');
-const group = interaction.options.getString('group');
 
 
 

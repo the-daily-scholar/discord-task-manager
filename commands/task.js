@@ -2,7 +2,6 @@ const { EmbedBuilder } = require('discord.js');
 const moment = require('moment');
 const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets');
 const { parseDueDate } = require('../utils/dateHelper');
-const group = interaction.options.getString('group');
 
 
 function formatDueDate(due) {
@@ -104,6 +103,7 @@ module.exports = {
 
       if (subCmd === 'add') {
         const description = interaction.options.getString('description');
+        const group = interaction.options.getString('group');
         const assignee = interaction.options.getUser('assignee') || interaction.user;
 
         // Validate due date
