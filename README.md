@@ -1,7 +1,6 @@
 # Discord Task Manager Bot
 **A lightweight Discord bot for managing team tasks with Google Sheets integration.
-Features task tracking, deadlines, group filtering, and automated reminders.
-**
+Features task tracking, deadlines, group filtering, and automated reminders.**
 
 ---
 
