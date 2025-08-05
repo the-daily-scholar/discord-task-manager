@@ -1,10 +1,10 @@
-# Discord Task Manager Bot
+# Discord Task Manager Bot 🗨️
 **A lightweight Discord bot for managing team tasks with Google Sheets integration.
 Features task tracking, deadlines, group filtering, and automated reminders.**
 
 ---
 
-## Features
+## 🪄 Features 
 
 - Add, list, and update tasks directly in Discord.
 - Google Sheets backend for persistent storage.
@@ -14,7 +14,7 @@ Features task tracking, deadlines, group filtering, and automated reminders.**
 
 ---
 
-## Setup
+## 🚧 Setup
 
 1. Clone & Install
 ```
@@ -43,7 +43,7 @@ npm start
 
 ---
 
-## Commands
+## 💼 Commands
 
 ### /task add
 ```
@@ -92,7 +92,7 @@ npm start
 
 ---
 
-## Contributing to the project 
+## ⚙️ Contributing to the project 
 1. Fork the repo.
 2. Create a new branch.
 3. Submit a pull request.
