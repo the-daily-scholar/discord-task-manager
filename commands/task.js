@@ -1,8 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
-const moment = require('moment');
-const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets');
-const { parseDueDate } = require('../utils/dateHelper');
-
+const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets'); // <-- ensure updateTaskStatus is imported
+const { detectGroup } = require('../utils/helpers');
+const moment = require('moment'); // Needed for due date formatting
 
 function formatDueDate(due) {
   if (due === 'No deadline') return due;
@@ -18,10 +17,6 @@ function formatDueDate(due) {
   return due;
 }
 
-function isValidDate(dateStr) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateStr) && moment(dateStr, 'YYYY-MM-DD', true).isValid();
-}
-
 module.exports = {
   data: {
     name: 'task',
@@ -32,16 +27,34 @@ module.exports = {
         name: 'add',
         description: 'Add new task',
         options: [
-          { name: 'description', type: 3, required: true, description: 'Task details' },
-          { name: 'due', type: 3, description: 'Deadline (YYYY-MM-DD)' },
-          { name: 'assignee', type: 6, description: 'Assign to a member' },
-          { name: 'group', type: 3, description: 'Task group', choices: [
-            { name: 'General', value: 'general' },
-            { name: 'Alpha', value: 'alpha' },
-            { name: 'Beta', value: 'beta' },
-            { name: 'Gamma', value: 'gamma' },
-            { name: 'Delta', value: 'delta' }
-          ]}
+          { 
+            name: 'description', 
+            type: 3, 
+            required: true,
+            description: 'Detailed explanation of the task'
+          },
+          { 
+            name: 'due', 
+            type: 3, 
+            description: 'Deadline (format: YYYY-MM-DD)'
+          },
+          { 
+            name: 'assignee', 
+            type: 6, 
+            description: 'Team member responsible (@username)'
+          },
+          { 
+            name: 'group', 
+            type: 3, 
+            description: 'Task group',
+            choices: [
+              { name: 'General', value: 'general' },
+              { name: 'Alpha', value: 'alpha' },
+              { name: 'Beta', value: 'beta' },
+              { name: 'Gamma', value: 'gamma' },
+              { name: 'Delta', value: 'delta' }
+            ]
+          }
         ]
       },
       {
@@ -49,74 +62,85 @@ module.exports = {
         name: 'list',
         description: 'List tasks',
         options: [
-          { name: 'group', type: 3, description: 'Filter by group', choices: [
-            { name: 'General', value: 'general' },
-            { name: 'Alpha', value: 'alpha' },
-            { name: 'Beta', value: 'beta' },
-            { name: 'Gamma', value: 'gamma' },
-            { name: 'Delta', value: 'delta' }
-          ]},
-          { name: 'status', type: 3, description: 'Filter by status', choices: [
-            { name: 'Pending', value: '🟡 Pending' },
-            { name: 'In Progress', value: '🟠 In Progress' },
-            { name: 'Completed', value: '✅ Completed' }
-          ]}
+          { 
+            name: 'group', 
+            type: 3, 
+            description: 'Select team to filter tasks',
+            choices: [
+              { name: 'Alpha', value: 'alpha' },
+              { name: 'Beta', value: 'beta' },
+              { name: 'Gamma', value: 'gamma' },
+              { name: 'Delta', value: 'delta' }
+            ]
+          },
+          {
+            name: 'status',
+            type: 3,
+            description: 'Filter by task status',
+            choices: [
+              { name: '🟡 Pending', value: '🟡 Pending' },
+              { name: '🟠 In Progress', value: '🟠 In Progress' },
+              { name: '✅ Completed', value: '✅ Completed' }
+            ]
+          }
         ]
       },
       {
-        type: 1,
+        type: 1, // SUB_COMMAND
         name: 'update',
         description: 'Update task status',
         options: [
-          { name: 'id', type: 4, required: true, description: 'Task ID' },
-          { name: 'status', type: 3, required: true, description: 'New status', choices: [
-            { name: 'Pending', value: '🟡 Pending' },
-            { name: 'In Progress', value: '🟠 In Progress' },
-            { name: 'Completed', value: '✅ Completed' }
-          ]}
+          { 
+            name: 'id', 
+            description: 'Task ID to update', 
+            type: 4, // INTEGER
+            required: true 
+          },
+          {
+            name: 'status',
+            description: 'New status',
+            type: 3, // STRING
+            required: true,
+            choices: [
+              { name: '🟡 Pending', value: '🟡 Pending' },
+              { name: '🟠 In Progress', value: '🟠 In Progress' },
+              { name: '✅ Completed', value: '✅ Completed' }
+            ]
+          }
         ]
       }
     ]
   },
-
   async execute(interaction) {
-    try {
-      const subCmd = interaction.options.getSubcommand();
-      const group = detectGroup(interaction.channel.name);
+    const subCmd = interaction.options.getSubcommand();
+    const group = detectGroup(interaction.channel.name);
 
-      if (!group) {
-        await interaction.reply({ 
-          content: `❌ This channel (**${interaction.channel.name}**) is not mapped to any group. Please use a valid task channel.`,
-          ephemeral: true 
-        });
-        return;
-      }
+    try { // <-- keep try/catch global
 
       if (subCmd === 'add') {
         const description = interaction.options.getString('description');
-        const group = interaction.options.getString('group');
+        const due = interaction.options.getString('due') || 'No deadline';
         const assignee = interaction.options.getUser('assignee') || interaction.user;
+        const taskGroup = interaction.options.getString('group') || group;
 
-        // Validate due date
-        const rawDue = interaction.options.getString('due') || 'No deadline';
-const { date: due, error } = parseDueDate(rawDue);
+        await addTask({
+          description,
+          due,
+          assignee: assignee.id,
+          creator: interaction.user.tag,
+          group: taskGroup
+        });
 
-if (error) {
-  return await interaction.reply({
-    content: `❌ ${error}`,
-    ephemeral: true
-  });
-}
-
-        await addTask({ description, due, assignee: assignee.id, creator: interaction.user.tag, group });
-        await interaction.reply(`✅ Task added for <@${assignee.id}> in ${group}`);
+        await interaction.reply(`✅ Task added for <@${assignee.id}> in ${taskGroup}`);
       }
-
 
       else if (subCmd === 'list') {
         const filterGroup = interaction.options.getString('group');
-        const tasks = await getTasks(filterGroup || group);
+        const filterStatus = interaction.options.getString('status');
+        let tasks = await getTasks(filterGroup || group);
 
+        if (filterStatus) tasks = tasks.filter(t => t.status === filterStatus);
+        
         const embed = new EmbedBuilder()
           .setTitle(`📋 Tasks (${filterGroup || group})`)
           .setDescription(tasks.map(t => 
@@ -129,10 +153,12 @@ if (error) {
       }
 
       else if (subCmd === 'update') {
+        await interaction.deferReply({ ephemeral: true }); // <-- ADDED: prevent timeout
+
         const id = interaction.options.getInteger('id');
         const status = interaction.options.getString('status');
         await updateTaskStatus(id, status);
-        await interaction.reply(`✅ Task #${id} updated to **${status}**.`);
+        await interaction.editReply(`✅ Task #${id} updated to **${status}**.`); // <-- CHANGED: edit after defer
       }
 
     } catch (error) {
