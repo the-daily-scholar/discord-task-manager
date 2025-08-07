@@ -19,6 +19,19 @@ const FLAG_COLUMNS = {
   overdue150Sent: 'L'
 };
 
+const FIELD_COLUMN_MAP = {
+  description: 'B',
+  assignee: 'C',
+  due: 'D',
+  status: 'E',
+  creator: 'F',
+  group: 'H',
+  reminder100Sent: 'I',
+  reminder36Sent: 'J',
+  overdue50Sent: 'K',
+  overdue150Sent: 'L'
+};
+
 module.exports = {
   async addTask({ description, due, assignee, creator, group }) {
     try {
@@ -103,16 +116,65 @@ module.exports = {
     }
   },
 
+  async editTaskField(taskId, field, newValue) {
+    if (!(field in FIELD_COLUMN_MAP)) {
+      throw new Error(`Field "${field}" is not editable or unknown.`);
+    }
+
+    const column = FIELD_COLUMN_MAP[field];
+
+    try {
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'A:A' // Just get ID column to find row index
+      });
+
+      if (!res.data.values) {
+        console.log('No data found.');
+        return;
+      }
+
+      const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
+      if (rowIndex === -1) {
+        console.log(`Task ID ${taskId} not found.`);
+        return;
+      }
+
+      const sheetRow = rowIndex + 1; // Sheets rows are 1-indexed
+
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${column}${sheetRow}`,
+        valueInputOption: 'RAW',
+        resource: { values: [[newValue]] }
+      });
+
+      console.log(`✅ Task ID ${taskId} field "${field}" updated to "${newValue}"`);
+    } catch (error) {
+      console.error('Error updating task field:', error);
+      throw error;
+    }
+  },
+
   async updateTaskStatus(taskId, newStatus) {
     try {
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: 'A:L'
       });
+
+      if (!res.data.values) {
+        console.log('No data found.');
+        return;
+      }
       
-      if (!res.data.values) return;
+      // const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
+      // if (rowIndex === -1) return;
       const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
-      if (rowIndex === -1) return;
+      if (rowIndex === -1) {
+        console.log(`Task ID ${taskId} not found.`);
+        return;
+      }
       
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
@@ -120,6 +182,7 @@ module.exports = {
         valueInputOption: 'RAW',
         resource: { values: [[newStatus]] }
       });
+      console.log(`✅ Task ID ${taskId} updated to "${newStatus}"`);
     } catch (error) {
       console.error('Error updating task status:', error);
     }

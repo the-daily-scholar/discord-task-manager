@@ -1,5 +1,7 @@
+//commands/task.js
+
 const { EmbedBuilder } = require('discord.js');
-const { addTask, getTasks, updateTaskStatus } = require('../utils/googleSheets'); // <-- ensure updateTaskStatus is imported
+const { addTask, getTasks, updateTaskStatus, editTaskField } = require('../utils/googleSheets'); // <-- ensure updateTaskStatus is imported
 const { detectGroup } = require('../utils/helpers');
 const moment = require('moment'); // Needed for due date formatting
 
@@ -87,6 +89,55 @@ module.exports = {
       },
       {
         type: 1, // SUB_COMMAND
+        name: 'edit',
+        description: 'Edit an existing task',
+        options: [
+          {
+            name: 'id',
+            type: 4, // INTEGER
+            description: 'Task ID to edit',
+            required: true
+          },
+          {
+            name: 'field',
+            type: 3, // STRING
+            description: 'Which field to edit',
+            required: true,
+            choices: [
+              { name: 'Description', value: 'description' },
+              { name: 'Due Date (YYYY-MM-DD)', value: 'due' },
+              { name: 'Group', value: 'group' },
+              { name: 'Assignee', value: 'assignee' }
+            ]
+          },
+          {
+            name: 'value',
+            type: 3, // STRING, for description, due, (for assignee and group we will get differently)
+            description: 'New value (for assignee pick user instead)',
+            required: false
+          },
+          {
+            name: 'group',
+            type: 3,
+            description: 'New group (if editing group)',
+            required: false,
+            choices: [
+              { name: 'Alpha', value: 'alpha' },
+              { name: 'Beta', value: 'beta' },
+              { name: 'Gamma', value: 'gamma' },
+              { name: 'Delta', value: 'delta' }
+            ]
+          },
+          {
+            name: 'assignee',
+            type: 6, // USER type
+            description: 'New assignee (if editing assignee)',
+            required: false
+          }
+        ]
+      }, 
+      {
+        type: 1, // SUB_COMMAND
         name: 'update',
         description: 'Update task status',
         options: [
@@ -133,7 +184,37 @@ module.exports = {
 
         await interaction.reply(`✅ Task added for <@${assignee.id}> in ${taskGroup}`);
       }
+      else if (subCmd === 'edit') {
+        await interaction.deferReply({ ephemeral: true });
+      
+        const id = interaction.options.getInteger('id');
+        const field = interaction.options.getString('field');
 
+        let newValue;
+
+        // Get new value based on field type
+        if (field === 'assignee') {
+          const user = interaction.options.getUser('assignee');
+          if (!user) return interaction.editReply({ content: 'Please specify the new assignee!', ephemeral: true });
+          newValue = user.id;
+        } else if (field === 'group') {
+          newValue = interaction.options.getString('group');
+          if (!newValue) return interaction.editReply({ content: 'Please specify the new group!', ephemeral: true });
+        } else {
+          newValue = interaction.options.getString('value');
+          if (!newValue) return interaction.editReply({ content: `Please specify the new value for ${field}!`, ephemeral: true });
+        }
+
+        // Validate due date format if editing due
+        if (field === 'due' && !/^\d{4}-\d{2}-\d{2}$/.test(newValue)) {
+          return interaction.editReply('❌ Invalid due date format. Use YYYY-MM-DD.');
+        }
+
+        await editTaskField(id, field, newValue);
+
+        await interaction.editReply(`✅ Task #${id} updated. **${field}** is now **${newValue}**.`);
+      }  
+      
       else if (subCmd === 'list') {
         const filterGroup = interaction.options.getString('group');
         const filterStatus = interaction.options.getString('status');
@@ -162,8 +243,16 @@ module.exports = {
       }
 
     } catch (error) {
-      console.error('Task command error:', error);
-      await interaction.reply({ content: "❌ An error occurred while processing your request.", ephemeral: true });
+      // console.error('Task command error:', error);
+      console.error('Error updating task status:', error);
+      // await interaction.reply({ content: "❌ An error occurred while processing your request.", ephemeral: true });
+      // Optionally notify user the command failed
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({ content: '❌ Something went wrong.', ephemeral: true });
+      } else {
+        await interaction.editReply({ content: '❌ Something went wrong.', ephemeral: true });
+      }
     }
   }
+  
 };

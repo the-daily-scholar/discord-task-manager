@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { Client, IntentsBitField, EmbedBuilder } = require('discord.js');
 const { scheduleReminders } = require('./utils/reminders');
-const { addTask, getTasks } = require('./utils/googleSheets');
+const { addTask, getTasks, updateTaskStatus, editTaskField } = require('./utils/googleSheets');
 
 const client = new Client({
   intents: [
@@ -125,6 +125,7 @@ client.on('interactionCreate', async (interaction) => {
     const subCmd = interaction.options.getSubcommand();
 
     if (subCmd === 'add') {
+      console.log("Adding Task")
       const description = interaction.options.getString('description');
       const due = interaction.options.getString('due') || 'No deadline';
       const assignee = interaction.options.getUser('assignee') || interaction.user;
@@ -138,10 +139,63 @@ client.on('interactionCreate', async (interaction) => {
         group,
       });
 
-      await interaction.reply({ content: `✅ Task added for <@${assignee.id}> in ${group}`, flags: 1 << 6 });
+      await interaction.reply({ content: `✅ Task added for <@${assignee.id}> in ${group}` });
+    }
+
+    else if (subCmd === 'edit') {
+      console.log("Editing Task");
+      await interaction.deferReply({ ephemeral: true });
+    
+      const id = interaction.options.getInteger('id');
+      const field = interaction.options.getString('field');
+    
+      let newValue;
+    
+      try {
+        if (field === 'assignee') {
+          const user = interaction.options.getUser('assignee');
+          if (!user) return await interaction.editReply({ content: 'Please specify the new assignee!', ephemeral: true });
+          newValue = user.id;
+        } else if (field === 'group') {
+          newValue = interaction.options.getString('group');
+          if (!newValue) return await interaction.editReply({ content: 'Please specify the new group!', ephemeral: true });
+        } else {
+          newValue = interaction.options.getString('value');
+          if (!newValue) return await interaction.editReply({ content: `Please specify the new value for ${field}!`, ephemeral: true });
+        }
+    
+        // Validate due date format if editing due
+        if (field === 'due' && !/^\d{4}-\d{2}-\d{2}$/.test(newValue)) {
+          return await interaction.editReply('❌ Invalid due date format. Use YYYY-MM-DD.');
+        }
+       
+        await editTaskField(id, field, newValue);
+    
+        await interaction.editReply(`✅ Task #${id} updated. **${field}** is now **${newValue}**.`);
+      } catch (error) {
+        console.error('Error editing task:', error);
+        await interaction.editReply('❌ Failed to edit the task.');
+      }
+    }  
+
+    else if (subCmd === 'update') {
+      console.log("Updating Task")
+      await interaction.deferReply({ ephemeral: true }); // Acknowledge the interaction and allow for delayed response
+      
+      const taskId = interaction.options.getInteger('id');
+      const newStatus = interaction.options.getString('status');
+      
+      try {
+        await updateTaskStatus(taskId, newStatus);
+        await interaction.editReply(`✅ Task #${taskId} updated to **${newStatus}**.`);
+      } catch (error) {
+        console.error('Error updating task:', error);
+        await interaction.editReply('❌ Failed to update the task status.');
+      }
     }
 
     else if (subCmd === 'list') {
+      console.log("Listing Tasks")
       const filterGroup = interaction.options.getString('group');
       const filterStatus = interaction.options.getString('status');
       let tasks = await getTasks(filterGroup);
@@ -165,6 +219,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   else if (commandName === 'mytasks') {
+    console.log("Listing My Task")
     const filterStatus = interaction.options.getString('status');
     let tasks = (await getTasks()).filter((t) => t.assignee === interaction.user.id);
 
