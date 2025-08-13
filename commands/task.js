@@ -67,6 +67,7 @@ module.exports = {
           { 
             name: 'group', 
             type: 3, 
+            required: true,
             description: 'Select team to filter tasks',
             choices: [
               { name: 'Alpha', value: 'alpha' },
@@ -78,11 +79,13 @@ module.exports = {
           {
             name: 'status',
             type: 3,
+            required: true,
             description: 'Filter by task status',
             choices: [
               { name: '🟡 Pending', value: '🟡 Pending' },
               { name: '🟠 In Progress', value: '🟠 In Progress' },
-              { name: '✅ Completed', value: '✅ Completed' }
+              { name: '✅ Completed', value: '✅ Completed' },
+              { name: '❌ Cancelled', value: '❌ Cancelled' }
             ]
           }
         ]
@@ -113,7 +116,7 @@ module.exports = {
           {
             name: 'value',
             type: 3, // STRING, for description, due, (for assignee and group we will get differently)
-            description: 'New value (for assignee pick user instead)',
+            description: 'New value (for description or due date)',
             required: false
           },
           {
@@ -155,7 +158,8 @@ module.exports = {
             choices: [
               { name: '🟡 Pending', value: '🟡 Pending' },
               { name: '🟠 In Progress', value: '🟠 In Progress' },
-              { name: '✅ Completed', value: '✅ Completed' }
+              { name: '✅ Completed', value: '✅ Completed' },
+              { name: '❌ Cancelled', value: '❌ Cancelled' }
             ]
           }
         ]
@@ -243,10 +247,8 @@ module.exports = {
       }
 
     } catch (error) {
-      // console.error('Task command error:', error);
       console.error('Error updating task status:', error);
       // await interaction.reply({ content: "❌ An error occurred while processing your request.", ephemeral: true });
-      // Optionally notify user the command failed
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({ content: '❌ Something went wrong.', ephemeral: true });
       } else {

@@ -150,10 +150,11 @@ client.on('interactionCreate', async (interaction) => {
       const field = interaction.options.getString('field');
     
       let newValue;
+      let user;
     
       try {
         if (field === 'assignee') {
-          const user = interaction.options.getUser('assignee');
+          user = interaction.options.getUser('assignee');
           if (!user) return await interaction.editReply({ content: 'Please specify the new assignee!', ephemeral: true });
           newValue = user.id;
         } else if (field === 'group') {
@@ -170,10 +171,25 @@ client.on('interactionCreate', async (interaction) => {
         }
        
         await editTaskField(id, field, newValue);
+
+        // For assignee, display mention instead of raw ID:
+      let displayValue = newValue;
+      if (field === 'assignee') {
+        // Try to fetch the user to mention by ID (if available)
+        try {
+          displayValue = user ? `<@${user.id}>` : newValue;
+          console.log(displayValue)
+        } catch {
+          displayValue = newValue;
+        }
+      }
     
-        await interaction.editReply(`✅ Task #${id} updated. **${field}** is now **${newValue}**.`);
+        await interaction.editReply(`✅ Task #${id} updated. **${field}** is now **${displayValue}**.`);
       } catch (error) {
         console.error('Error editing task:', error);
+        if (error.message.includes('not found')) {
+          return await interaction.editReply({ content: `❌ Task ID  #${id} not found. Please check the ID and try again.`, ephemeral: true });
+        }
         await interaction.editReply('❌ Failed to edit the task.');
       }
     }  
@@ -190,12 +206,16 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.editReply(`✅ Task #${taskId} updated to **${newStatus}**.`);
       } catch (error) {
         console.error('Error updating task:', error);
+        if (error.message.includes('not found')) {
+          return await interaction.editReply({ content: `❌ Task ID #${taskId} not found. Please check the ID and try again.`, ephemeral: true });
+        }
         await interaction.editReply('❌ Failed to update the task status.');
       }
     }
 
     else if (subCmd === 'list') {
       console.log("Listing Tasks")
+      await interaction.deferReply({ ephemeral: true });
       const filterGroup = interaction.options.getString('group');
       const filterStatus = interaction.options.getString('status');
       let tasks = await getTasks(filterGroup);
@@ -214,12 +234,13 @@ client.on('interactionCreate', async (interaction) => {
             : 'No tasks found!'
         );
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
   }
 
   else if (commandName === 'mytasks') {
     console.log("Listing My Task")
+    await interaction.deferReply({ flags: 64  });
     const filterStatus = interaction.options.getString('status');
     let tasks = (await getTasks()).filter((t) => t.assignee === interaction.user.id);
 
@@ -231,11 +252,11 @@ client.on('interactionCreate', async (interaction) => {
       .setTitle(`📌 Your Tasks (${tasks.length})`)
       .setDescription(
         tasks.length
-          ? tasks.map((t) => `**#${t.id}** ${t.description}\nDue: ${t.due} | Group: ${t.group}`).join('\n\n')
+          ? tasks.map((t) => `**#${t.id}** ${t.description}\nDue: ${t.due} | Status: ${t.status} | Group: ${t.group}`).join('\n\n')
           : 'No tasks assigned!'
       );
 
-    await interaction.reply({ embeds: [embed], flags: 1 << 6 });
+    await interaction.editReply({ embeds: [embed], flags: 1 << 6 });
   }
 });
 

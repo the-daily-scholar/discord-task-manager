@@ -21,7 +21,7 @@ module.exports = {
 
         for (const task of tasks) {
           // Skip invalid or completed tasks
-          if (task.status === '✅ Completed' || task.due === 'No deadline') continue;
+          if (task.status === '✅ Completed' || task.status === '❌ Cancelled' || task.due === 'No deadline') continue;
           
           const dueDate = moment(task.due, 'YYYY-MM-DD');
           if (!dueDate.isValid()) continue;

@@ -24,11 +24,12 @@ module.exports = {
         name: 'status',
         description: 'Filter tasks by status',
         type: 3, // STRING
-        required: false,
+        required: true,
         choices: [
           { name: '🟡 Pending', value: '🟡 Pending' },
           { name: '🟠 In Progress', value: '🟠 In Progress' },
-          { name: '✅ Completed', value: '✅ Completed' }
+          { name: '✅ Completed', value: '✅ Completed' },
+          { name: '❌ Cancelled', value: '❌ Cancelled' }
         ]
       }
     ]
