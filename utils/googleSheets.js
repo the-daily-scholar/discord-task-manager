@@ -131,13 +131,12 @@ module.exports = {
 
       if (!res.data.values) {
         console.log('No data found.');
-        return;
+        throw new Error('No data found.');
       }
 
       const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
       if (rowIndex === -1) {
-        console.log(`Task ID ${taskId} not found.`);
-        return;
+        throw new Error(`Task ID ${taskId} not found.`);
       }
 
       const sheetRow = rowIndex + 1; // Sheets rows are 1-indexed
@@ -164,16 +163,14 @@ module.exports = {
       });
 
       if (!res.data.values) {
-        console.log('No data found.');
-        return;
+        throw new Error('No data found.'); 
       }
       
       // const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
       // if (rowIndex === -1) return;
       const rowIndex = res.data.values.findIndex(row => row[0] == taskId);
       if (rowIndex === -1) {
-        console.log(`Task ID ${taskId} not found.`);
-        return;
+        throw new Error(`Task ID ${taskId} not found.`);
       }
       
       await sheets.spreadsheets.values.update({
@@ -185,6 +182,7 @@ module.exports = {
       console.log(`✅ Task ID ${taskId} updated to "${newStatus}"`);
     } catch (error) {
       console.error('Error updating task status:', error);
+      throw error;
     }
   },
 
