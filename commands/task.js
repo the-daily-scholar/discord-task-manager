@@ -54,7 +54,27 @@ module.exports = {
               { name: 'Alpha', value: 'alpha' },
               { name: 'Beta', value: 'beta' },
               { name: 'Gamma', value: 'gamma' },
-              { name: 'Delta', value: 'delta' }
+              { name: 'Delta', value: 'delta' },
+              { name: 'Epsilon', value: 'epsilon' },
+              { name: 'Zeta', value: 'zeta' },
+              { name: 'Eta', value: 'eta' },
+              { name: 'Theta', value: 'theta' },
+              { name: 'Iota', value: 'iota' },
+              { name: 'Kappa', value: 'kappa' },
+              { name: 'Lambda', value: 'lambda' },
+              { name: 'Mu', value: 'mu' },
+              { name: 'Nu', value: 'nu' },
+              { name: 'Xi', value: 'xi' },
+              { name: 'Omicron', value: 'omicron' },
+              { name: 'Pi', value: 'pi' },
+              { name: 'Rho', value: 'rho' },
+              { name: 'Sigma', value: 'sigma' },
+              { name: 'Tau', value: 'tau' },
+              { name: 'Upsilon', value: 'upsilon' },
+              { name: 'Phi', value: 'phi' },
+              { name: 'Chi', value: 'chi' },
+              { name: 'Psi', value: 'psi' },
+              { name: 'Omega', value: 'omega' }
             ]
           }
         ]
@@ -73,7 +93,27 @@ module.exports = {
               { name: 'Alpha', value: 'alpha' },
               { name: 'Beta', value: 'beta' },
               { name: 'Gamma', value: 'gamma' },
-              { name: 'Delta', value: 'delta' }
+              { name: 'Delta', value: 'delta' },
+              { name: 'Epsilon', value: 'epsilon' },
+              { name: 'Zeta', value: 'zeta' },
+              { name: 'Eta', value: 'eta' },
+              { name: 'Theta', value: 'theta' },
+              { name: 'Iota', value: 'iota' },
+              { name: 'Kappa', value: 'kappa' },
+              { name: 'Lambda', value: 'lambda' },
+              { name: 'Mu', value: 'mu' },
+              { name: 'Nu', value: 'nu' },
+              { name: 'Xi', value: 'xi' },
+              { name: 'Omicron', value: 'omicron' },
+              { name: 'Pi', value: 'pi' },
+              { name: 'Rho', value: 'rho' },
+              { name: 'Sigma', value: 'sigma' },
+              { name: 'Tau', value: 'tau' },
+              { name: 'Upsilon', value: 'upsilon' },
+              { name: 'Phi', value: 'phi' },
+              { name: 'Chi', value: 'chi' },
+              { name: 'Psi', value: 'psi' },
+              { name: 'Omega', value: 'omega' }
             ]
           },
           {
@@ -128,7 +168,27 @@ module.exports = {
               { name: 'Alpha', value: 'alpha' },
               { name: 'Beta', value: 'beta' },
               { name: 'Gamma', value: 'gamma' },
-              { name: 'Delta', value: 'delta' }
+              { name: 'Delta', value: 'delta' },
+              { name: 'Epsilon', value: 'epsilon' },
+              { name: 'Zeta', value: 'zeta' },
+              { name: 'Eta', value: 'eta' },
+              { name: 'Theta', value: 'theta' },
+              { name: 'Iota', value: 'iota' },
+              { name: 'Kappa', value: 'kappa' },
+              { name: 'Lambda', value: 'lambda' },
+              { name: 'Mu', value: 'mu' },
+              { name: 'Nu', value: 'nu' },
+              { name: 'Xi', value: 'xi' },
+              { name: 'Omicron', value: 'omicron' },
+              { name: 'Pi', value: 'pi' },
+              { name: 'Rho', value: 'rho' },
+              { name: 'Sigma', value: 'sigma' },
+              { name: 'Tau', value: 'tau' },
+              { name: 'Upsilon', value: 'upsilon' },
+              { name: 'Phi', value: 'phi' },
+              { name: 'Chi', value: 'chi' },
+              { name: 'Psi', value: 'psi' },
+              { name: 'Omega', value: 'omega' }
             ]
           },
           {
@@ -258,3 +318,4 @@ module.exports = {
   }
   
 };
+
